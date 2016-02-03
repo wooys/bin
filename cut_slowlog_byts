@@ -1,0 +1,50 @@
+#!/usr/bin/env python
+#encoding:utf-8
+# cut_slowlog_byts.py
+# time:2016/2/3
+# author:Mark.Woo
+# mail:mark5279@163.com
+# desc:按照slowlog中timestamp截取部分数据
+
+import sys
+import re
+
+def cut_slow_log(file,start,end):
+    log = []
+    with open(file) as f:
+        for line in f:
+            # 分离出slowlog中timestamp的值,一起和其他数据存放log列表中
+            ts = re.sub("\timestamp\=(\d+)",'',line.replace('SET timestamp=','').replace(';','').strip('\n'))
+            log.append(ts)
+        #print log
+    # 下面2个for循环,查询出开始和结束时间戳在log列表中的位点
+    for i in range(len(log)):
+        if log[-(len(log)-1-i)].isdigit():
+            if int(log[-(len(log)-1-i)]) > end:
+                end = log.index(log[-(len(log)-1-i)])
+
+    for i in range(len(log)):
+        if log[i].isdigit():
+            if int(log[i]) > start:
+                start = log.index(log[i])
+                break
+
+    #print start,end,记录截取后的slowlog数据
+    with open('/tmp/cut_slowlog_result.log','w') as f:
+        for row in range(start,end):
+            if log[row].isdigit():
+                log[row] = 'SET timestamp=' + log[row] + ';'
+            result = log[row] + "\n"
+            # print result,
+            f.writelines(result)
+
+if __name__=='__main__':
+    if len(sys.argv) == 1:
+        print 'useage:python',sys.argv[0],'slow_log','start','end'
+        exit()
+    else:
+        file = sys.argv[1]
+        start = int(sys.argv[2])
+        end = int(sys.argv[3])     
+        # 传入slow_log 开始 结束 timestamp
+        cut_slow_log(file,start,end)
